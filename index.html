@@ -576,33 +576,39 @@ async function theatre(labels, p) {
     };
 
     add(`<span class="dim">&gt; initializing soul scanner</span>`);
-    await sleep(550);
+    await sleep(900);
     add(`<span class="dim">&gt; sampling machine identity&hellip;</span>`);
-    await sleep(380);
+    await sleep(700);
 
     for (const { k, v } of labels) {
         const dots = '.'.repeat(Math.max(2, 24 - k.length));
         add(`<span class="dim">&gt; ${k} <span style="color:#143020">${dots}</span> <span class="val">${v}</span></span>`);
-        await sleep(100 + Math.random() * 90);
+        await sleep(220 + Math.random() * 160);
     }
 
-    await sleep(280);
+    await sleep(600);
     add(`<span class="dim">&gt; compiling fingerprint&hellip;</span>`);
-    await sleep(480);
+    await sleep(900);
     add(`<span class="dim">&gt; sha-256 hashing&hellip;</span>`);
-    await sleep(580);
+    await sleep(1100);
     add(``);
     add(`<span class="rule">&gt; ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>`);
+    await sleep(300);
     add(`<span class="hi">&gt;   SOUL HASH GENERATED</span>`);
+    await sleep(300);
     add(`<span class="rule">&gt; ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>`);
     add(``);
+    await sleep(500);
     add(`<span class="hash">&gt; ${p.hex}</span>`);
+    await sleep(1200);
     add(``);
     add(`<span class="dim">&gt; colors&nbsp;&nbsp; <span class="swatch" style="background:${p.c1}"></span> ${p.c1} &nbsp; <span class="swatch" style="background:${p.c2}"></span> ${p.c2}</span>`);
+    await sleep(600);
     add(`<span class="dim">&gt; formula  <span class="form">${p.formula}</span></span>`);
+    await sleep(500);
     add(``);
     add(`<span class="dim">&gt; rendering sigil&hellip;</span>`);
-    await sleep(950);
+    await sleep(3500);
 }
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
