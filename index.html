@@ -58,12 +58,12 @@ body {
     overflow: hidden;
 }
 
-#scan-lines .dim   { color: #1e5c30; }
-#scan-lines .val   { color: #2e8c4e; }
+#scan-lines .dim   { color: #4a9e64; }
+#scan-lines .val   { color: #6ecf8a; }
 #scan-lines .hi    { color: #afffca; font-weight: bold; }
 #scan-lines .hash  { color: var(--c1); font-weight: bold; word-break: break-all; }
 #scan-lines .form  { color: #77ee77; }
-#scan-lines .rule  { color: #1e5c30; }
+#scan-lines .rule  { color: #3a7a50; }
 #scan-lines .swatch { display: inline-block; width: 0.8em; height: 0.8em; vertical-align: middle; border-radius: 2px; }
 
 .cursor {
@@ -135,7 +135,7 @@ body {
     font-size: 0.62rem;
     text-transform: uppercase;
     letter-spacing: 0.14em;
-    color: #3a3a3a;
+    color: #888;
     margin-bottom: 0.4rem;
 }
 
@@ -155,7 +155,7 @@ details summary {
     font-size: 0.6rem;
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    color: #2a2a2a;
+    color: #666;
     cursor: pointer;
     user-select: none;
     list-style: none;
@@ -175,8 +175,8 @@ details summary:hover { color: #555; }
     border-radius: 5px;
     text-align: left;
 }
-#fp-list .fk { color: #1a3a28; }
-#fp-list .fv { color: #2a6040; }
+#fp-list .fk { color: #4a8a68; }
+#fp-list .fv { color: #6ab890; }
 
 .formula-box {
     background: rgba(0,0,0,0.4);
@@ -227,7 +227,7 @@ button:disabled { opacity: 0.35; cursor: not-allowed; }
     font-size: 0.62rem;
     text-transform: uppercase;
     letter-spacing: 0.14em;
-    color: #3a3a3a;
+    color: #888;
     text-align: center;
     margin-bottom: 0.8rem;
 }
@@ -237,7 +237,7 @@ table {
     font-size: 0.7rem;
 }
 th {
-    color: #2a2a2a;
+    color: #666;
     font-weight: normal;
     text-transform: uppercase;
     letter-spacing: 0.07em;
@@ -248,19 +248,19 @@ th {
 th:last-child { text-align: left; }
 td {
     padding: 0.25rem 0.6rem;
-    color: #253525;
+    color: #5a7a5a;
     text-align: right;
     border-bottom: 1px solid #0a0a0a;
     font-variant-numeric: tabular-nums;
 }
-td:last-child { text-align: left; color: #1f3a1f; }
+td:last-child { text-align: left; color: #4a7a4a; }
 tr.hi td { color: var(--c1); opacity: 0.75; }
 tr.hi td:last-child { color: var(--c1); opacity: 1; }
 
 /* ── Footer ── */
 #footer {
     font-size: 0.58rem;
-    color: #1e1e1e;
+    color: #555;
     letter-spacing: 0.08em;
     text-align: center;
 }
@@ -582,7 +582,7 @@ async function theatre(labels, p) {
 
     for (const { k, v } of labels) {
         const dots = '.'.repeat(Math.max(2, 24 - k.length));
-        add(`<span class="dim">&gt; ${k} <span style="color:#143020">${dots}</span> <span class="val">${v}</span></span>`);
+        add(`<span class="dim">&gt; ${k} <span style="color:#2e6640">${dots}</span> <span class="val">${v}</span></span>`);
         await sleep(220 + Math.random() * 160);
     }
 
