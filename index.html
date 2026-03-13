@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Soul Sigil</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+    --c1: #00ff88;
+    --c2: #0088ff;
+    --glow: rgba(0,255,136,0.3);
+    --bg: #050507;
+    --green: #00ff41;
+}
+
+body {
+    background: var(--bg);
+    color: #eee;
+    font-family: 'Cascadia Code', 'Fira Code', 'Courier New', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+/* ── Stars ── */
+#stars {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    opacity: 0.28;
+    pointer-events: none;
+}
+
+/* ── Terminal ── */
+#terminal {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 2rem clamp(1rem, 8vw, 7rem);
+    background: rgba(5,5,7,0.97);
+    transition: opacity 0.9s ease;
+}
+
+#terminal.out { opacity: 0; pointer-events: none; }
+
+#scan-lines {
+    font-size: clamp(0.72rem, 1.8vw, 0.9rem);
+    line-height: 1.85;
+    color: var(--green);
+    max-width: 680px;
+    width: 100%;
+    max-height: 80vh;
+    overflow: hidden;
+}
+
+#scan-lines .dim   { color: #1e5c30; }
+#scan-lines .val   { color: #2e8c4e; }
+#scan-lines .hi    { color: #afffca; font-weight: bold; }
+#scan-lines .hash  { color: var(--c1); font-weight: bold; word-break: break-all; }
+#scan-lines .form  { color: #77ee77; }
+#scan-lines .rule  { color: #1e5c30; }
+#scan-lines .swatch { display: inline-block; width: 0.8em; height: 0.8em; vertical-align: middle; border-radius: 2px; }
+
+.cursor {
+    display: inline-block;
+    width: 0.55em;
+    height: 1em;
+    background: var(--green);
+    animation: blink 0.75s step-end infinite;
+    vertical-align: text-bottom;
+    margin-left: 2px;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+/* ── App ── */
+#app {
+    position: relative;
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2.5rem;
+    padding: 3rem 1rem 5rem;
+    opacity: 0;
+    transform: translateY(14px);
+    transition: opacity 0.9s ease, transform 0.9s ease;
+}
+#app.show { opacity: 1; transform: translateY(0); }
+
+/* ── Sigil ── */
+.sigil-wrap {
+    width: clamp(260px, 48vw, 370px);
+    height: clamp(260px, 48vw, 370px);
+    position: relative;
+    filter: drop-shadow(0 0 32px var(--glow));
+}
+
+.amoeba {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, var(--c1), var(--c2));
+    border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+    animation: morph 20s infinite alternate cubic-bezier(0.45,0.05,0.55,0.95);
+    opacity: 0.88;
+}
+@keyframes morph {
+    0%   { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; transform: rotate(0deg)   scale(1);    }
+    50%  { border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%; transform: rotate(180deg) scale(1.08); }
+    100% { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; transform: rotate(360deg) scale(1);    }
+}
+
+#glyph {
+    position: absolute;
+    inset: 14px;
+    mix-blend-mode: screen;
+    overflow: visible;
+}
+#glyph line   { stroke: rgba(255,255,255,0.68); stroke-width: 1.2; fill: none; stroke-linecap: round; }
+#glyph circle { fill: rgba(255,255,255,0.48); }
+
+/* ── Meta ── */
+.meta {
+    text-align: center;
+    max-width: 540px;
+    width: 100%;
+    padding: 0 0.75rem;
+}
+
+.label {
+    font-size: 0.62rem;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: #3a3a3a;
+    margin-bottom: 0.4rem;
+}
+
+#hash-val {
+    font-size: clamp(0.58rem, 1.8vw, 0.72rem);
+    color: var(--c1);
+    font-weight: bold;
+    word-break: break-all;
+    line-height: 1.65;
+    margin-bottom: 0.75rem;
+}
+
+details {
+    margin-bottom: 1.25rem;
+}
+details summary {
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #2a2a2a;
+    cursor: pointer;
+    user-select: none;
+    list-style: none;
+}
+details summary::-webkit-details-marker { display: none; }
+details summary::after { content: ' ▾'; }
+details[open] summary::after { content: ' ▴'; }
+details summary:hover { color: #555; }
+
+#fp-list {
+    margin-top: 0.5rem;
+    font-size: 0.62rem;
+    line-height: 1.9;
+    padding: 0.6rem 0.8rem;
+    background: rgba(255,255,255,0.015);
+    border: 1px solid rgba(255,255,255,0.04);
+    border-radius: 5px;
+    text-align: left;
+}
+#fp-list .fk { color: #1a3a28; }
+#fp-list .fv { color: #2a6040; }
+
+.formula-box {
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 6px;
+    padding: 0.7rem 1.2rem;
+    color: #77ee77;
+    font-size: 0.9rem;
+    margin-bottom: 1.25rem;
+}
+
+.btns {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+button {
+    background: none;
+    border: 1px solid var(--c1);
+    color: var(--c1);
+    padding: 0.5rem 1.6rem;
+    cursor: pointer;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    transition: background 0.18s, box-shadow 0.18s, color 0.18s;
+}
+button:hover:not(:disabled) {
+    background: var(--c1);
+    color: #000;
+    box-shadow: 0 0 18px var(--c1);
+}
+button:disabled { opacity: 0.35; cursor: not-allowed; }
+
+#wav-btn { border-color: var(--c2); color: var(--c2); }
+#wav-btn:hover:not(:disabled) { background: var(--c2); box-shadow: 0 0 18px var(--c2); }
+
+/* ── Era Table ── */
+.era-section {
+    width: 100%;
+    max-width: 560px;
+}
+.era-section h3 {
+    font-size: 0.62rem;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: #3a3a3a;
+    text-align: center;
+    margin-bottom: 0.8rem;
+}
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.7rem;
+}
+th {
+    color: #2a2a2a;
+    font-weight: normal;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    padding: 0.3rem 0.6rem;
+    border-bottom: 1px solid #0f0f0f;
+    text-align: right;
+}
+th:last-child { text-align: left; }
+td {
+    padding: 0.25rem 0.6rem;
+    color: #253525;
+    text-align: right;
+    border-bottom: 1px solid #0a0a0a;
+    font-variant-numeric: tabular-nums;
+}
+td:last-child { text-align: left; color: #1f3a1f; }
+tr.hi td { color: var(--c1); opacity: 0.75; }
+tr.hi td:last-child { color: var(--c1); opacity: 1; }
+
+/* ── Footer ── */
+#footer {
+    font-size: 0.58rem;
+    color: #1e1e1e;
+    letter-spacing: 0.08em;
+    text-align: center;
+}
+</style>
+</head>
+<body>
+
+<canvas id="stars"></canvas>
+
+<div id="terminal">
+    <div id="scan-lines"></div>
+    <span class="cursor"></span>
+</div>
+
+<div id="app">
+    <div class="sigil-wrap">
+        <div class="amoeba"></div>
+        <svg id="glyph" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+    <div class="meta">
+        <div class="label">Hardware Soul Hash</div>
+        <div id="hash-val"></div>
+        <details>
+            <summary>fingerprint sources</summary>
+            <div id="fp-list"></div>
+        </details>
+        <div class="label">Bytebeat Heartbeat</div>
+        <div class="formula-box" id="formula-val"></div>
+        <div class="btns">
+            <button id="play-btn">Initialize Pulse</button>
+            <button id="wav-btn">Download WAV (5 min)</button>
+        </div>
+    </div>
+    <div class="era-section">
+        <h3>Beat Era Table</h3>
+        <table>
+            <thead><tr>
+                <th>Era</th><th>t</th><th>Time</th><th>Mask</th><th>Character</th>
+            </tr></thead>
+            <tbody id="era-body"></tbody>
+        </table>
+    </div>
+    <div id="footer"></div>
+</div>
+
+<script>
+'use strict';
+
+// ── Stars ─────────────────────────────────────────────────────────────────────
+(function() {
+    const cv = document.getElementById('stars');
+    const cx = cv.getContext('2d');
+    let w, h;
+    const resize = () => { w = cv.width = innerWidth; h = cv.height = innerHeight; };
+    window.addEventListener('resize', resize); resize();
+    const stars = Array.from({length: 220}, () => ({
+        x: Math.random(), y: Math.random(),
+        r: Math.random() * 1.5 + 0.2,
+        s: Math.random() * 0.00035 + 0.00008
+    }));
+    (function tick() {
+        cx.clearRect(0, 0, w, h);
+        cx.fillStyle = '#fff';
+        for (const s of stars) {
+            cx.beginPath();
+            cx.arc(s.x * w, s.y * h, s.r, 0, Math.PI * 2);
+            cx.fill();
+            s.y -= s.s;
+            if (s.y < 0) s.y = 1;
+        }
+        requestAnimationFrame(tick);
+    })();
+})();
+
+// ── Fingerprint ───────────────────────────────────────────────────────────────
+async function fingerprint() {
+    const parts = [], labels = [];
+
+    // Canvas rendering fingerprint
+    try {
+        const c = document.createElement('canvas');
+        c.width = 300; c.height = 60;
+        const cx = c.getContext('2d');
+        cx.fillStyle = '#f6230c'; cx.fillRect(0, 0, 300, 60);
+        cx.fillStyle = '#06699a'; cx.font = 'bold 18px Arial';
+        cx.textBaseline = 'alphabetic';
+        cx.fillText('Soul Sigil \u{1F52E}', 8, 42);
+        cx.fillStyle = 'rgba(90,200,0,0.75)'; cx.font = '13px Courier New';
+        cx.fillText('hardware fingerprint 0x', 10, 20);
+        const snippet = c.toDataURL().slice(-48);
+        parts.push('cv:' + snippet);
+        labels.push({ k: 'canvas fingerprint', v: snippet.slice(0, 14) + '…' });
+    } catch(_) {}
+
+    // WebGL GPU info
+    try {
+        const gl = document.createElement('canvas').getContext('webgl');
+        if (gl) {
+            const ext = gl.getExtension('WEBGL_debug_renderer_info');
+            if (ext) {
+                const vend = gl.getParameter(ext.UNMASKED_VENDOR_WEBGL);
+                const rend = gl.getParameter(ext.UNMASKED_RENDERER_WEBGL);
+                parts.push('gl-v:' + vend, 'gl-r:' + rend);
+                labels.push({ k: 'webgl vendor',   v: vend });
+                labels.push({ k: 'webgl renderer',  v: rend });
+            }
+        }
+    } catch(_) {}
+
+    // Audio context fingerprint
+    try {
+        const ac = new OfflineAudioContext(1, 44100, 44100);
+        const osc = ac.createOscillator();
+        const cmp = ac.createDynamicsCompressor();
+        osc.connect(cmp); cmp.connect(ac.destination); osc.start(0);
+        const buf = await ac.startRendering();
+        const d = buf.getChannelData(0);
+        let s = 0; for (let i = 0; i < 200; i++) s += Math.abs(d[i]);
+        const v = s.toFixed(14);
+        parts.push('au:' + v);
+        labels.push({ k: 'audio fingerprint', v: v.slice(0, 12) + '…' });
+    } catch(_) {}
+
+    // Navigator / screen
+    const nav = [
+        ['cpu cores',      navigator.hardwareConcurrency],
+        ['memory',         navigator.deviceMemory ? navigator.deviceMemory + ' GB' : null],
+        ['touch points',   navigator.maxTouchPoints || null],
+        ['language',       navigator.language],
+        ['platform',       navigator.platform],
+        ['color depth',    screen.colorDepth + '-bit'],
+        ['screen',         screen.width + 'x' + screen.height],
+        ['pixel ratio',    devicePixelRatio],
+        ['timezone',       Intl.DateTimeFormat().resolvedOptions().timeZone],
+    ];
+    for (const [k, v] of nav) {
+        if (v != null) {
+            parts.push(k + ':' + v);
+            labels.push({ k, v: String(v) });
+        }
+    }
+
+    const txt = parts.join('||');
+    const ab  = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(txt));
+    const hex = Array.from(new Uint8Array(ab))
+        .map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase();
+
+    return { hex, labels };
+}
+
+// ── Params ────────────────────────────────────────────────────────────────────
+function deriveParams(hex) {
+    const s1 = parseInt(hex.slice(0, 8),  16);
+    const s2 = parseInt(hex.slice(8, 16), 16);
+    const s3 = parseInt(hex.slice(16,24), 16);
+    const c1 = '#' + hex.slice(0, 6);
+    const c2 = '#' + hex.slice(6, 12);
+    const v1 = (s1 % 10) + 5;
+    const v2 = (s2 % 10) + 2;
+    const v3 = (s3 % 5)  + 12;
+    const v4 = (s1 % 4)  + 6;
+    return { hex, c1, c2, s1, v1, v2, v3, v4,
+             formula: `t*(t>>${v1}|t>>${v2})&(t>>${v3})&(t>>${v4})` };
+}
+
+// ── Glyph ─────────────────────────────────────────────────────────────────────
+function lcg(s) { return ((s * 1664525 + 1013904223) >>> 0); }
+
+function buildGlyph(p) {
+    const N = 9, svg = document.getElementById('glyph');
+    const pts = Array.from({length: N}, (_, i) => {
+        const a = 2 * Math.PI * i / N - Math.PI / 2;
+        return [100 + 65 * Math.cos(a), 100 + 65 * Math.sin(a)];
+    });
+    let s = p.s1 >>> 0, cur = 0;
+    const conns = new Set();
+    for (let i = 0; i < N * 3; i++) {
+        s = lcg(s);
+        const nxt = s % N;
+        if (nxt !== cur) conns.add(Math.min(cur, nxt) * 100 + Math.max(cur, nxt));
+        cur = nxt;
+    }
+    const ns = 'http://www.w3.org/2000/svg';
+    for (const key of conns) {
+        const i = Math.floor(key / 100), j = key % 100;
+        const el = document.createElementNS(ns, 'line');
+        el.setAttribute('x1', pts[i][0].toFixed(1)); el.setAttribute('y1', pts[i][1].toFixed(1));
+        el.setAttribute('x2', pts[j][0].toFixed(1)); el.setAttribute('y2', pts[j][1].toFixed(1));
+        svg.appendChild(el);
+    }
+    for (const [x, y] of pts) {
+        const el = document.createElementNS(ns, 'circle');
+        el.setAttribute('cx', x.toFixed(1)); el.setAttribute('cy', y.toFixed(1));
+        el.setAttribute('r', '2.5');
+        svg.appendChild(el);
+    }
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function renderApp(p, labels) {
+    // CSS vars + glow
+    const root = document.documentElement;
+    root.style.setProperty('--c1', p.c1);
+    root.style.setProperty('--c2', p.c2);
+    const r = parseInt(p.c1.slice(1,3),16);
+    const g = parseInt(p.c1.slice(3,5),16);
+    const b = parseInt(p.c1.slice(5,7),16);
+    root.style.setProperty('--glow', `rgba(${r},${g},${b},0.38)`);
+
+    buildGlyph(p);
+
+    document.getElementById('hash-val').textContent   = p.hex;
+    document.getElementById('formula-val').textContent = p.formula;
+
+    // Fingerprint sources list
+    document.getElementById('fp-list').innerHTML = labels.map(({ k, v }) =>
+        `<div><span class="fk">${k.padEnd(22, '\u00a0')}</span><span class="fv">${v}</span></div>`
+    ).join('');
+
+    // Era table
+    const { v3 } = p, sr = 8000, eraLen = 1 << v3;
+    const notable = { 1:'first tone — bit 0 only', 2:'bit 1 opens',
+                      3:'interference begins', 7:'dense harmonics', 15:'slow-evolving complexity' };
+    const rows = [{ e:0, t:0, note:'near silence (mask is zero)', hi:false }];
+    for (let e = 1; e <= 20; e++) {
+        const t = e * eraLen;
+        rows.push({ e, t, note: notable[e] || (e < 7 ? 'layering' : e < 15 ? 'complex texture' : ''), hi: !!notable[e] });
+    }
+    document.getElementById('era-body').innerHTML = rows.map(r =>
+        `<tr class="${r.hi ? 'hi' : ''}">
+            <td>${r.e}</td>
+            <td>${r.t.toLocaleString()}</td>
+            <td>${(r.t / sr).toFixed(1)}s</td>
+            <td>${r.e}</td>
+            <td>${r.note}</td>
+        </tr>`
+    ).join('');
+
+    // Footer
+    const tz  = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const now = new Date().toLocaleDateString('en-US', {year:'numeric',month:'long',day:'numeric'});
+    document.getElementById('footer').textContent = `fingerprinted ${now} · ${tz}`;
+}
+
+// ── Audio ─────────────────────────────────────────────────────────────────────
+function initAudio(p) {
+    const { v1, v2, v3, v4 } = p;
+    let ctx, t = 0;
+    const btn = document.getElementById('play-btn');
+    btn.onclick = () => {
+        if (!ctx) {
+            ctx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 8000 });
+            const gain = ctx.createGain(); gain.gain.value = 0.5;
+            const node = ctx.createScriptProcessor(4096, 1, 1);
+            node.onaudioprocess = e => {
+                const out = e.outputBuffer.getChannelData(0);
+                for (let i = 0; i < out.length; i++) {
+                    out[i] = (((t * (t >> v1 | t >> v2) & (t >> v3) & (t >> v4)) & 255) / 127.5) - 1;
+                    t++;
+                }
+            };
+            node.connect(gain); gain.connect(ctx.destination);
+            btn.textContent = 'Pulse Active';
+        } else if (ctx.state === 'suspended') {
+            ctx.resume(); btn.textContent = 'Pulse Active';
+        } else {
+            ctx.suspend(); btn.textContent = 'Resume Pulse';
+        }
+    };
+}
+
+// ── WAV Download ──────────────────────────────────────────────────────────────
+function initWav(p) {
+    const { v1, v2, v3, v4, hex } = p;
+    const btn = document.getElementById('wav-btn');
+    btn.onclick = () => {
+        btn.textContent = 'Generating…'; btn.disabled = true;
+        const src = `self.onmessage=function(e){
+const{v1,v2,v3,v4,dur}=e.data,sr=8000,n=sr*dur;
+const ab=new ArrayBuffer(44+n*2),dv=new DataView(ab);
+const ws=(o,s)=>{for(let i=0;i<s.length;i++)dv.setUint8(o+i,s.charCodeAt(i));};
+ws(0,'RIFF');dv.setUint32(4,36+n*2,true);ws(8,'WAVE');
+ws(12,'fmt ');dv.setUint32(16,16,true);dv.setUint16(20,1,true);dv.setUint16(22,1,true);
+dv.setUint32(24,sr,true);dv.setUint32(28,sr*2,true);dv.setUint16(32,2,true);dv.setUint16(34,16,true);
+ws(36,'data');dv.setUint32(40,n*2,true);
+for(let t=0;t<n;t++){
+const val=(t*(t>>v1|t>>v2)&(t>>v3)&(t>>v4))&255;
+dv.setInt16(44+t*2,Math.max(-32768,Math.min(32767,Math.round((val/127.5-1)*32767))),true);}
+self.postMessage(ab,[ab]);};`;
+        const wBlob = new Blob([src], { type: 'application/javascript' });
+        const wUrl  = URL.createObjectURL(wBlob);
+        const worker = new Worker(wUrl);
+        worker.onmessage = ({ data }) => {
+            URL.revokeObjectURL(wUrl);
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(new Blob([data], { type: 'audio/wav' }));
+            a.download = `soul_sigil_${hex.slice(0,8)}.wav`;
+            a.click();
+            btn.textContent = 'Download WAV (5 min)'; btn.disabled = false;
+        };
+        worker.postMessage({ v1, v2, v3, v4, dur: 300 });
+    };
+}
+
+// ── Terminal Theatre ──────────────────────────────────────────────────────────
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+async function theatre(labels, p) {
+    const el = document.getElementById('scan-lines');
+    const add = html => {
+        const d = document.createElement('div');
+        d.innerHTML = html; el.appendChild(d);
+    };
+
+    add(`<span class="dim">&gt; initializing soul scanner</span>`);
+    await sleep(550);
+    add(`<span class="dim">&gt; sampling machine identity&hellip;</span>`);
+    await sleep(380);
+
+    for (const { k, v } of labels) {
+        const dots = '.'.repeat(Math.max(2, 24 - k.length));
+        add(`<span class="dim">&gt; ${k} <span style="color:#143020">${dots}</span> <span class="val">${v}</span></span>`);
+        await sleep(100 + Math.random() * 90);
+    }
+
+    await sleep(280);
+    add(`<span class="dim">&gt; compiling fingerprint&hellip;</span>`);
+    await sleep(480);
+    add(`<span class="dim">&gt; sha-256 hashing&hellip;</span>`);
+    await sleep(580);
+    add(``);
+    add(`<span class="rule">&gt; ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>`);
+    add(`<span class="hi">&gt;   SOUL HASH GENERATED</span>`);
+    add(`<span class="rule">&gt; ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>`);
+    add(``);
+    add(`<span class="hash">&gt; ${p.hex}</span>`);
+    add(``);
+    add(`<span class="dim">&gt; colors&nbsp;&nbsp; <span class="swatch" style="background:${p.c1}"></span> ${p.c1} &nbsp; <span class="swatch" style="background:${p.c2}"></span> ${p.c2}</span>`);
+    add(`<span class="dim">&gt; formula  <span class="form">${p.formula}</span></span>`);
+    add(``);
+    add(`<span class="dim">&gt; rendering sigil&hellip;</span>`);
+    await sleep(950);
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+(async () => {
+    const { hex, labels } = await fingerprint();
+    const p = deriveParams(hex);
+
+    await theatre(labels, p);
+
+    renderApp(p, labels);
+    initAudio(p);
+    initWav(p);
+
+    // Fade terminal out, fade app in
+    const term = document.getElementById('terminal');
+    const app  = document.getElementById('app');
+    term.classList.add('out');
+    await sleep(400);
+    app.style.display = 'flex';
+    requestAnimationFrame(() => requestAnimationFrame(() => app.classList.add('show')));
+})();
+</script>
+</body>
+</html>
